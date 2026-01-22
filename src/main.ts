@@ -1,99 +1,90 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import { normalizePath, Plugin, WorkspaceLeaf } from "obsidian";
+import { HouseView, VIEW_TYPE_HOUSE } from "./HouseView";
+import { PluginData } from "./data/pluginData";
+import { DEFAULT_PERSONNES } from "./data/personnes";
+import { RelationshipHouseSettings, DEFAULT_SETTINGS } from "./settings";
+import { RelationshipHouseSettingsTab } from "./ui/SettingsTab";
+import { Groupe, DEFAULT_GROUPES } from "./data/groups";
 
-// Remember to rename these classes and interfaces!
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class RelationshipHousePlugin extends Plugin {
+	data: PluginData;
+	settings: RelationshipHouseSettings;
 
 	async onload() {
+		this.data = await this.loadPluginData();
 		await this.loadSettings();
+		this.addSettingTab(
+			new RelationshipHouseSettingsTab(this.app, this)
+		);
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.registerView(
+			VIEW_TYPE_HOUSE,
+			(leaf: WorkspaceLeaf) =>
+				new HouseView(leaf, this.getAssetsPath(), this)
+		);
+
+		this.addRibbonIcon("home", "Maison des relations", () => {
+			this.activateView();
 		});
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
 	}
 
-	onunload() {
+	async loadPluginData(): Promise<PluginData> {
+		const loaded = await this.loadData();
+
+		if (!loaded) {
+			return {
+				personnes: structuredClone(DEFAULT_PERSONNES),
+				historique: []
+			};
+		}
+
+		return {
+			personnes: loaded.personnes ?? structuredClone(DEFAULT_PERSONNES),
+			historique: loaded.historique ?? []
+		};
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+		const loaded = await this.loadData();
+
+		this.settings = {
+			...DEFAULT_SETTINGS,
+			...(loaded?.settings ?? {})
+		};
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
+		const existing = await this.loadData();
+		await this.saveData({
+			...existing,
+			settings: this.settings
+		});
 	}
 
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
+	refreshHouseViews() {
+		this.app.workspace.iterateAllLeaves(leaf => {
+			const view = leaf.view as any;
+			if (view?.getViewType?.() === "relationship-house-view") {
+				view.refresh?.();
+			}
+		});
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+	async savePluginData() {
+		await this.saveData(this.data);
+	}
+
+	getAssetsPath(): string {
+		return normalizePath(this.manifest.dir + "/assets");
+	}
+
+	async activateView() {
+		const leaf = this.app.workspace.getLeaf(true);
+		await leaf.setViewState({
+			type: VIEW_TYPE_HOUSE,
+			active: true
+		});
+		this.app.workspace.revealLeaf(leaf);
 	}
 }

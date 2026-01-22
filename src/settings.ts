@@ -1,36 +1,24 @@
-import {App, PluginSettingTab, Setting} from "obsidian";
-import MyPlugin from "./main";
+import { Groupe, DEFAULT_GROUPES } from "./data/groups";
+import { DEFAULT_PIECES } from "./data/pieces";
 
-export interface MyPluginSettings {
-	mySetting: string;
+export interface PieceSettings {
+    id: string;
+    label: string;
+    description?: string;
+    visible: boolean;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+export interface RelationshipHouseSettings {
+    groupes: Groupe[];
+    pieces: PieceSettings[];
 }
 
-export class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
+export const DEFAULT_SETTINGS: RelationshipHouseSettings = {
+    groupes: DEFAULT_GROUPES,
+    pieces: DEFAULT_PIECES.map(p => ({
+        id: p.id,
+        label: p.nom,
+        description: p.description ?? "",
+        visible: true,
+    }))
+};
