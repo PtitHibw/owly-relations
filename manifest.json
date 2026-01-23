@@ -3,7 +3,7 @@
 	"name": "OwlyRelations",
 	"version": "1.0.4",
 	"minAppVersion": "0.15.0",
-	"description": "A plugin about managing your relations in a virtual house",
+	"description": "A plugin about managing your relations in a virtual house.",
 	"author": "PtitHibw",
 	"authorUrl": "https://github.com/PtitHibw",
 	"isDesktopOnly": false
