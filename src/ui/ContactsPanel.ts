@@ -121,9 +121,6 @@ export class ContactsPanel {
         item.dataset.personId = p.id;
         item.dataset.personName = getDisplayName(p) ?? "";
         item.style.borderLeft = `4px solid ${p.couleur ?? "#999"}`;
-        item.style.display = "flex";
-        item.style.justifyContent = "space-between";
-        item.style.alignItems = "center";
         item.setAttr("data-tooltip", getFullName(p));
         item.addClass("has-tooltip");
         item.ondblclick = e => {
@@ -140,9 +137,7 @@ export class ContactsPanel {
 
 
         // boutons droite
-        const buttonsWrapper = item.createDiv();
-        buttonsWrapper.style.display = "flex";
-        buttonsWrapper.style.gap = "4px";
+        const buttonsWrapper = item.createDiv("buttons-wrapper");
 
         const editBtn = buttonsWrapper.createEl("button", { text: "✎" });
         editBtn.onclick = e => {

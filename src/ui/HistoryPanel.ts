@@ -47,11 +47,12 @@ export class HistoryPanel {
         this.renderList();
         this.refreshHighlight();
 
-        document.addEventListener("keydown", e => {
+        this.plugin.registerDomEvent(document, "keydown", (e: KeyboardEvent) => {
             if (e.key === "Escape") this.clearSelection();
         });
 
-        document.addEventListener("click", e => {
+
+        this.plugin.registerDomEvent(document, "click", (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             if (
                 target.closest(".history-panel") ||
@@ -60,6 +61,7 @@ export class HistoryPanel {
 
             this.clearSelection();
         });
+
     }
 
     clearSelection() {
@@ -70,13 +72,8 @@ export class HistoryPanel {
     // ───────── SEARCH ─────────
     renderSearch() {
         const wrapper = this.contentEl.createDiv("history-search");
-        wrapper.style.position = "relative";
 
         this.selectedWrapper = wrapper.createDiv("history-search-selected");
-        this.selectedWrapper.style.display = "flex";
-        this.selectedWrapper.style.flexWrap = "wrap";
-        this.selectedWrapper.style.gap = "4px";
-        this.selectedWrapper.style.marginBottom = "4px";
 
         this.searchInput = wrapper.createEl("input", {
             type: "text",
@@ -84,25 +81,15 @@ export class HistoryPanel {
         });
 
         this.suggestionsEl = wrapper.createDiv("history-suggestions");
-        Object.assign(this.suggestionsEl.style, {
-            position: "absolute",
-            top: "100%",
-            left: "0",
-            right: "0",
-            background: "var(--background-secondary)",
-            zIndex: "50",
-            border: "1px solid var(--background-modifier-border)",
-            maxHeight: "150px",
-            overflowY: "auto",
-            display: "none"
-        });
+        
 
         this.searchInput.oninput = () => {
             const value = this.searchInput.value.toLowerCase();
             this.suggestionsEl.empty();
 
             if (!value) {
-                this.suggestionsEl.style.display = "none";
+                this.suggestionsEl.removeClass("is-open");
+
                 return;
             }
 
@@ -127,15 +114,6 @@ export class HistoryPanel {
                     el.setText(item.label);
                     el.addClass(item.type === "group" ? "is-group" : "is-person");
 
-                    Object.assign(el.style, {
-                        padding: "4px",
-                        cursor: "pointer"
-                    });
-
-                    el.onmouseenter = () =>
-                        (el.style.background = "var(--background-modifier-hover)");
-                    el.onmouseleave = () =>
-                        (el.style.background = "transparent");
 
                     el.onclick = e => {
                         e.stopPropagation();
@@ -143,7 +121,8 @@ export class HistoryPanel {
                     };
                 });
 
-            this.suggestionsEl.style.display = "block";
+            this.suggestionsEl.toggleClass("is-open", !!value);
+
         };
     }
 
@@ -160,7 +139,8 @@ export class HistoryPanel {
 
         this.syncSelection();
         this.searchInput.value = "";
-        this.suggestionsEl.style.display = "none";
+        this.suggestionsEl.removeClass("is-open");
+
     }
 
     private addPerson(id: string) {
@@ -178,21 +158,13 @@ export class HistoryPanel {
 
             const badge = this.selectedWrapper.createDiv("search-badge");
             badge.setText(getDisplayName(person));
-
-            Object.assign(badge.style, {
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "2px 6px",
-                borderRadius: "12px",
-                fontSize: "12px",
-                backgroundColor: person.couleur ?? "#999",
-                color: "white"
-            });
+            badge.addClass("search-badge")
+            badge.style.backgroundColor = person.couleur ?? "#999"
+            
 
             const close = badge.createSpan();
             close.setText("✕");
-            close.style.marginLeft = "4px";
-            close.style.cursor = "pointer";
+            close.addClass("close")
 
             close.onclick = e => {
                 e.stopPropagation();
@@ -231,8 +203,9 @@ export class HistoryPanel {
             // ── Colonne 3 : Commentaire
             const commentBtn = item.createDiv("history-comment-btn");
             commentBtn.setText("💬");
-            commentBtn.style.cursor = "pointer";
-            commentBtn.style.opacity = move.commentaire ? "1" : "0.4";
+            commentBtn.addClass("history-comment-btn")
+            commentBtn.addClass(move.commentaire ? "" : "inactive");
+
 
             commentBtn.onclick = e => {
                 e.stopPropagation();

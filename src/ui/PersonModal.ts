@@ -44,7 +44,10 @@ export class PersonModal extends Modal {
         );
 
         /* ───────── IDENTITÉ ───────── */
-        contentEl.createEl("h3", { text: "- IDENTITÉ -" });
+        new Setting(contentEl)
+            .setName("- IDENTITÉ -")
+            .setHeading();
+
         
         new Setting(contentEl)
             .setName("Surnom")
@@ -73,7 +76,10 @@ export class PersonModal extends Modal {
         
 
         /* ───────── INFOS ───────── */
-        contentEl.createEl("h3", { text: "- INFORMATIONS -" });
+        new Setting(contentEl)
+            .setName("- INFORMATIONS -")
+            .setHeading();
+
 
         new Setting(contentEl)
             .setName("Date de naissance")
@@ -109,11 +115,13 @@ export class PersonModal extends Modal {
 
 
         /* ───────── COMMENTAIRE ───────── */
-        contentEl.createEl("h3", { text: "- COMMENTAIRE -" });
+        new Setting(contentEl)
+            .setName("- COMMENTAIRE -")
+            .setHeading();
+
 
         const textarea = contentEl.createEl("textarea");
-        textarea.style.width = "100%";
-        textarea.style.resize = "vertical";
+        textarea.addClass("person-comment");
         textarea.rows = 4;
         textarea.value = this.data.commentaire ?? "";
         textarea.oninput = () => (this.data.commentaire = textarea.value);
@@ -168,11 +176,8 @@ export class PersonModal extends Modal {
 
         /* ─── CHIPS SÉLECTIONNÉES ─── */
         if (selected.size > 0) {
-            const selectedWrap = container.createDiv();
-            selectedWrap.style.display = "flex";
-            selectedWrap.style.flexWrap = "wrap";
-            selectedWrap.style.gap = "4px";
-            selectedWrap.style.marginBottom = "6px";
+            const selectedWrap = container.createDiv("group-selected-wrap");
+
 
             selected.forEach(id => {
                 const g = groupes.find(gr => gr.id === id);
@@ -181,10 +186,9 @@ export class PersonModal extends Modal {
                 const chip = selectedWrap.createDiv("setting-tag");
                 chip.setText(`${g.emoji} ${g.label}`);
 
-                const close = chip.createSpan();
+                const close = chip.createSpan("group-chip-close");
                 close.setText("✕");
-                close.style.marginLeft = "6px";
-                close.style.cursor = "pointer";
+
 
                 close.onclick = () => {
                     selected.delete(id);
@@ -197,7 +201,8 @@ export class PersonModal extends Modal {
         /* ─── DROPDOWN NATIF ─── */
         const select = container.createEl("select");
         select.addClass("dropdown");
-        select.style.width = "100%";
+        select.addClass("group-select");
+
 
         const placeholder = select.createEl("option", {
             text: "Ajouter un groupe…",
@@ -232,30 +237,23 @@ export class PersonModal extends Modal {
     private renderNoteInput(container: HTMLElement) {
         const files = this.app.vault.getMarkdownFiles();
 
-        const wrapper = container.createDiv();
-        wrapper.style.position = "relative";
+        const wrapper = container.createDiv("note-input-wrapper");
 
         const input = wrapper.createEl("input", {
             type: "text",
             placeholder: "Rechercher une note…"
         });
-        input.style.width = "100%";
+        input.addClass("note-input");
         input.value = this.data.notePath ?? "";
 
-        const suggestions = wrapper.createDiv();
-        suggestions.style.position = "absolute";
-        suggestions.style.top = "100%";
-        suggestions.style.left = "0";
-        suggestions.style.right = "0";
-        suggestions.style.display = "none";
-        suggestions.style.zIndex = "100";
+        const suggestions = wrapper.createDiv("note-suggestions");
 
         input.oninput = () => {
             const value = input.value.toLowerCase();
             suggestions.empty();
 
             if (!value) {
-                suggestions.style.display = "none";
+                suggestions.removeClass("is-open");
                 return;
             }
 
@@ -268,11 +266,12 @@ export class PersonModal extends Modal {
                     item.onclick = () => {
                         input.value = f.path;
                         this.data.notePath = f.path;
-                        suggestions.style.display = "none";
+                        suggestions.removeClass("is-open");
+
                     };
                 });
 
-            suggestions.style.display = "block";
+            suggestions.addClass("is-open");
         };
     }
 

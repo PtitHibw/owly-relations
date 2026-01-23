@@ -16,10 +16,10 @@ export class HistoryCommentModal extends Modal {
         this.titleEl.setText("Commentaire");
 
         const textarea = contentEl.createEl("textarea");
-        textarea.style.width = "100%";
-        textarea.style.minHeight = "120px";
+        textarea.addClass("history-comment-textarea");
         textarea.value = this.initial ?? "";
         textarea.focus();
+
 
         const footer = contentEl.createDiv("modal-footer");
 

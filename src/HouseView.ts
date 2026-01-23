@@ -8,6 +8,8 @@ import { getPersonEmojis } from "./utils/groups";
 import { HistoryPanel } from "./ui/HistoryPanel";
 import { ContactsPanel } from "./ui/ContactsPanel";
 import { openPersonNote } from "./utils/openPersonNote";
+import { TFile } from "obsidian";
+
 
 export const VIEW_TYPE_HOUSE = "relationship-house-view";
 
@@ -63,78 +65,51 @@ export class HouseView extends ItemView {
 
 	async renderHouse(container: HTMLElement) {
 		const svgPath = normalizePath(this.assetsPath + "/house.svg");
+		// Asset du plugin → hors vault → adapter.read obligatoire
 		const svg = await this.app.vault.adapter.read(svgPath);
+
 
 		// ───────── SVG WRAPPER ─────────
 		this.svgWrapper = container.createDiv("house-svg-wrapper");
-		this.svgWrapper.innerHTML = svg;
-		Object.assign(this.svgWrapper.style, {
-			position: "relative",
-			overflow: "hidden",
-		});
+		
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(svg, "image/svg+xml");
+
+		const svgEl = doc.querySelector("svg");
+		if (!svgEl) {
+			throw new Error("SVG invalide : élément <svg> introuvable");
+		}
+
+		const importedSvg = document.importNode(svgEl, true);
+
+		this.svgWrapper.appendChild(importedSvg);
+
 
 		const overlay = this.svgWrapper.createDiv("house-overlay");
-		overlay.style.position = "absolute";
-		overlay.style.inset = "0";
-
-
+		
 		const pieceTooltip = document.body.createDiv("piece-tooltip");
-		Object.assign(pieceTooltip.style, {
-			position: "fixed",
-			display: "none",
-			pointerEvents: "none",
-			zIndex: "9999",
-			background: "var(--background-secondary)",
-			color: "var(--text-normal)",
-			padding: "4px 6px",
-			borderRadius: "4px",
-			fontSize: "12px",
-			maxWidth: "240px",
-			whiteSpace: "pre-wrap",
-		});
-
+		
 
 		// ───────── STATUS BAR + ZOOM CONTROLS ─────────
-		const statusZoomContainer = container.createDiv();
-		Object.assign(statusZoomContainer.style, {
-			position: "absolute",
-			bottom: "4px",
-			left: "50%",
-			transform: "translateX(-50%)",
-			display: "flex",
-			alignItems: "center",
-			gap: "6px",
-			zIndex: "1000",
-			background: "var(--background-secondary-alt)",
-			padding: "2px 6px",
-			borderRadius: "4px",
-		});
+		const statusZoomContainer = container.createDiv("house-status-bar");
 
+		
 		// Zoom buttons +/-
 		["+", "-"].forEach(text => {
 			const btn = statusZoomContainer.createEl("button");
 			btn.setText(text);
-			Object.assign(btn.style, {
-				padding: "2px 4px",
-				fontSize: "12px",
-				cursor: "pointer",
-			});
+			btn.addClass("house-zoom-btn");
 			btn.onclick = () => this.zoomSVG(text === "+" ? 1.1 : 0.9);
 		});
 
 		// Divider
-		const divider1 = statusZoomContainer.createDiv();
+		const divider1 = statusZoomContainer.createDiv("house-zoom-divider");
 		divider1.setText("|");
-		Object.assign(divider1.style, { opacity: "0.5", fontWeight: "bold" });
 
 		// Reset button
 		const resetBtn = statusZoomContainer.createEl("button");
 		resetBtn.setText("Reset");
-		Object.assign(resetBtn.style, {
-			padding: "2px 4px",
-			fontSize: "12px",
-			cursor: "pointer",
-		});
+		resetBtn.addClass("house-zoom-btn");
 		resetBtn.onclick = () => {
 			this.svgScale = 1;
 			this.svgOffset = { x: 0, y: 0 };
@@ -142,16 +117,11 @@ export class HouseView extends ItemView {
 		};
 
 		// Divider
-		const divider2 = statusZoomContainer.createDiv();
+		const divider2 = statusZoomContainer.createDiv("house-zoom-divider");
 		divider2.setText("|");
-		Object.assign(divider2.style, { opacity: "0.5", fontWeight: "bold" });
 
 		// Status / Coordinates
-		this.statusBar = statusZoomContainer.createDiv();
-		Object.assign(this.statusBar.style, {
-			fontSize: "12px",
-			color: "var(--text-normal)",
-		});
+		this.statusBar = statusZoomContainer.createDiv("house-coordinates");
 		this.statusBar.setText("X: -, Y: -");
 
 		// ───────── COORDS QUI PRENNENT EN COMPTE ZOOM + PAN ─────────
@@ -188,23 +158,25 @@ export class HouseView extends ItemView {
 				e.preventDefault();
 				this.isPanning = true;
 				this.panStart = { x: e.clientX - this.svgOffset.x, y: e.clientY - this.svgOffset.y };
-				this.svgWrapper.style.cursor = "grabbing";
+				this.svgWrapper.addClass("is-panning");
+
 			}
 		};
 
-		document.onmouseup = () => {
+		this.plugin.registerDomEvent(document, "mouseup", e => {
 			if (this.isPanning) {
 				this.isPanning = false;
-				this.svgWrapper.style.cursor = "crosshair";
-			}
-		};
+				this.svgWrapper.removeClass("is-panning");
 
-		document.onmousemove = e => {
+			}
+		});
+
+		this.plugin.registerDomEvent(document, "mousemove", e => {
 			if (!this.isPanning) return;
 			this.svgOffset.x = e.clientX - this.panStart.x;
 			this.svgOffset.y = e.clientY - this.panStart.y;
 			this.updateSVGTransform();
-		};
+		});
 
 		this.updateSVGTransform();
 
@@ -214,24 +186,15 @@ export class HouseView extends ItemView {
 		DEFAULT_PIECES.forEach(piece => {
 			const settingsPiece = this.plugin.settings.pieces?.find(p => p.id === piece.id);
 
-			// pièce masquée → on ne la rend pas
 			if (settingsPiece?.visible === false) return;
 
 
 			const pieceEl = overlay.createDiv("house-piece");
-			Object.assign(pieceEl.style, {
-				left: piece.x + "px",
-				top: piece.y + "px",
-				width: piece.width + "px",
-				height: piece.height + "px",
-				display: "flex",
-				flexDirection: "column",  // label au-dessus, badges en dessous
-				gap: "4px",
-				padding: "4px",
-				border: `2px dashed ${"rgba(76, 76, 76, 0.29)"}`,
-				borderRadius: "8px",
-				background: "rgba(167, 167, 167, 0.05)",
-			});
+			pieceEl.style.left = piece.x + "px";
+			pieceEl.style.top = piece.y + "px";
+			pieceEl.style.width = piece.width + "px";
+			pieceEl.style.height = piece.height + "px";
+
 
 
 			if (settingsPiece?.description) {
@@ -243,31 +206,18 @@ export class HouseView extends ItemView {
 					pieceTooltip.style.display = "block";
 				};
 			}
-			document.addEventListener("click", () => {
+			this.plugin.registerDomEvent(document, "click", () => {
 				pieceTooltip.style.display = "none";
 			});
-
-
 
 
 			// Label de la pièce
 			const labelEl = pieceEl.createDiv("piece-label");
 			labelEl.setText(settingsPiece?.label ?? piece.nom);
-			labelEl.style.margin = "0";
-
+			
 
 			// Container pour badges
-			const badgesContainer = pieceEl.createDiv();
-			Object.assign(badgesContainer.style, {
-				display: "flex",
-				flexWrap: "wrap",
-				gap: "4px",
-			});
-
-			pieceEl.style.border = `2px dashed ${"rgba(76,76,76,0.29)"}`;
-			pieceEl.style.background = "rgba(167,167,167,0.05)";
-
-
+			const badgesContainer = pieceEl.createDiv("house-badges");
 
 
 			pieceEl.ondragover = e => e.preventDefault();

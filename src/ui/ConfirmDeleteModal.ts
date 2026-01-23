@@ -13,7 +13,8 @@ export class ConfirmDeleteModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        contentEl.createEl("h3", { text: "Confirmer la suppression" });
+        this.titleEl.setText("Confirmer la suppression");
+
         contentEl.createEl("p", { text: this.message });
 
         const buttons = contentEl.createDiv({ cls: "modal-footer" });
