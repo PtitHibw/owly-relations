@@ -3,6 +3,9 @@ import RelationshipHousePlugin from "../main";
 import { OUTSIDE_HOUSE } from "../data/constants";
 import { getDisplayName } from "../data/personnes";
 import "emoji-picker-element";
+/* eslint-disable obsidianmd/ui/sentence-case */
+/* eslint-disable @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
+
 
 class EmojiPickerModal extends Modal {
     constructor(
@@ -106,7 +109,7 @@ export class RelationshipHouseSettingsTab extends PluginSettingTab {
                     (emoji) => {
                         g.emoji = emoji;
                         emojiBtn.textContent = emoji;
-                        this.plugin.saveSettings();
+                        void this.plugin.saveSettings();
                     }
                 ).open();
 

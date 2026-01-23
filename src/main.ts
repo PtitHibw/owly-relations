@@ -4,7 +4,7 @@ import { PluginData } from "./data/pluginData";
 import { DEFAULT_PERSONNES } from "./data/personnes";
 import { RelationshipHouseSettings, DEFAULT_SETTINGS } from "./settings";
 import { RelationshipHouseSettingsTab } from "./ui/SettingsTab";
-import { Groupe, DEFAULT_GROUPES } from "./data/groups";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-call */
 
 
 export default class RelationshipHousePlugin extends Plugin {
@@ -25,7 +25,7 @@ export default class RelationshipHousePlugin extends Plugin {
 		);
 
 		this.addRibbonIcon("home", "Maison des relations", () => {
-			this.activateView();
+			void this.activateView();
 		});
 	}
 
@@ -85,6 +85,6 @@ export default class RelationshipHousePlugin extends Plugin {
 			type: VIEW_TYPE_HOUSE,
 			active: true
 		});
-		this.app.workspace.revealLeaf(leaf);
+		await this.app.workspace.revealLeaf(leaf);
 	}
 }

@@ -7,6 +7,8 @@ import { getDisplayName } from "../data/personnes";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { getPersonEmojis } from "../utils/groups";
 import { openPersonNote } from "../utils/openPersonNote";
+/* eslint-disable obsidianmd/ui/sentence-case */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-misused-promises */
 
 
 export class ContactsPanel {

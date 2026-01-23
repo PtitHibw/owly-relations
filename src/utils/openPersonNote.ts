@@ -7,7 +7,7 @@ export function openPersonNote(app: App, person?: Personne) {
         return;
     }
 
-    app.workspace.openLinkText(
+    void app.workspace.openLinkText(
         person.notePath,
         "",
         true

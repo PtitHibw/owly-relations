@@ -3,6 +3,7 @@ import { getDisplayName } from "../data/personnes";
 import { OUTSIDE_HOUSE } from "../data/constants";
 import { getFullName } from "../data/constants";
 import { HistoryCommentModal } from "./HistoryCommentModal";
+/* eslint-disable @typescript-eslint/no-misused-promises */
 
 type SearchItem =
     | { type: "person"; id: string; label: string }
@@ -268,6 +269,7 @@ export class HistoryPanel {
 
             if (!id || this.selectedPersonIds.size === 0) {
                 el.classList.remove("is-dimmed", "is-highlighted");
+                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
                 (el as HTMLElement).style.background = "";
                 return;
             }

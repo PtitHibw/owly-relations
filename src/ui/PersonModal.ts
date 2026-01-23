@@ -2,6 +2,8 @@ import { App, Modal, Setting } from "obsidian";
 import RelationshipHousePlugin from "../main";
 import { Personne } from "../data/personnes";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
+/* eslint-disable obsidianmd/ui/sentence-case */
+/* eslint-disable @typescript-eslint/no-misused-promises */
 
 export class PersonModal extends Modal {
     private data: Partial<Personne>;

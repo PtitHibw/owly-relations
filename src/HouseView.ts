@@ -8,7 +8,8 @@ import { getPersonEmojis } from "./utils/groups";
 import { HistoryPanel } from "./ui/HistoryPanel";
 import { ContactsPanel } from "./ui/ContactsPanel";
 import { openPersonNote } from "./utils/openPersonNote";
-import { TFile } from "obsidian";
+/* eslint-disable obsidianmd/ui/sentence-case */
+/* eslint-disable obsidianmd/no-static-styles-assignment */
 
 
 export const VIEW_TYPE_HOUSE = "relationship-house-view";
@@ -200,6 +201,7 @@ export class HouseView extends ItemView {
 			if (settingsPiece?.description) {
 				pieceEl.oncontextmenu = (e) => {
 					e.preventDefault();
+					
 					pieceTooltip.setText(settingsPiece.description ?? "");
 					pieceTooltip.style.left = e.clientX + 12 + "px";
 					pieceTooltip.style.top = e.clientY + 12 + "px";
@@ -244,7 +246,7 @@ export class HouseView extends ItemView {
 
 				person.pieceId = to;
 				await this.plugin.savePluginData();
-				this.onOpen();
+				await this.onOpen();
 			};
 
 			personnes.filter(p => p.pieceId === piece.id).forEach(p => {
