@@ -3,7 +3,6 @@ import { getDisplayName } from "../data/personnes";
 import { OUTSIDE_HOUSE } from "../data/constants";
 import { getFullName } from "../data/constants";
 import { HistoryCommentModal } from "./HistoryCommentModal";
-/* eslint-disable @typescript-eslint/no-misused-promises */
 
 type SearchItem =
     | { type: "person"; id: string; label: string }
@@ -205,7 +204,9 @@ export class HistoryPanel {
             const commentBtn = item.createDiv("history-comment-btn");
             commentBtn.setText("💬");
             commentBtn.addClass("history-comment-btn")
-            commentBtn.addClass(move.commentaire ? "" : "inactive");
+            
+            commentBtn.toggleClass("inactive", !move.commentaire);
+
 
 
             commentBtn.onclick = e => {
@@ -213,12 +214,14 @@ export class HistoryPanel {
                 new HistoryCommentModal(
                     this.plugin.app,
                     move.commentaire ?? "",
-                    async value => {
-                        move.commentaire = value || undefined;
-                        await this.plugin.savePluginData();
-                        this.render();
-                    }
-                ).open();
+                    value => {
+                        void (async () => {
+                            move.commentaire = value || undefined;
+                            await this.plugin.savePluginData();
+                            this.render();
+                        })();
+
+                    }).open();
             };
 
             item.onclick = () => this.selectSinglePerson(move.personneId);
@@ -235,6 +238,7 @@ export class HistoryPanel {
     getSearchItems(): SearchItem[] {
         const items: SearchItem[] = [];
 
+        // Contacts existants
         this.plugin.data.personnes.forEach(p =>
             items.push({
                 type: "person",
@@ -243,6 +247,19 @@ export class HistoryPanel {
             })
         );
 
+        // Contacts supprimés mais présents dans l'historique
+        this.plugin.data.historique.forEach(move => {
+            // Si id déjà présent, ignore
+            if (!items.some(i => i.type === "person" && i.id === move.personneId)) {
+                items.push({
+                    type: "person",
+                    id: move.personneId,
+                    label: move.personneNom
+                });
+            }
+        });
+
+        // Groupes
         this.plugin.settings.groupes.forEach(g =>
             items.push({
                 type: "group",
@@ -255,6 +272,7 @@ export class HistoryPanel {
         return items;
     }
 
+
     // ───────── SYNC ─────────
     private syncSelection() {
         this.onSelectionChange(new Set(this.selectedPersonIds));
@@ -262,28 +280,42 @@ export class HistoryPanel {
         this.refreshHighlight();
     }
 
-    refreshHighlight() {
+
+    private refreshHighlight() {
         document.querySelectorAll(".history-item").forEach(el => {
             const id = el.getAttribute("data-person-id");
             const color = el.getAttribute("data-person-color") ?? "#888";
 
+            // Couleur adoucie
+            const rgba = this.hexToRgba(color, 0.2);
+
+            el.classList.remove("is-dimmed", "is-highlighted", "highlighted-temp");
+
             if (!id || this.selectedPersonIds.size === 0) {
-                el.classList.remove("is-dimmed", "is-highlighted");
-                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                (el as HTMLElement).style.background = "";
                 return;
             }
 
             if (this.selectedPersonIds.has(id)) {
-                el.classList.add("is-highlighted");
-                el.classList.remove("is-dimmed");
-                (el as HTMLElement).style.background = `${color}22`;
+                el.classList.add("is-highlighted", "highlighted-temp");
+                // applique couleur via variable CSS sur le parent (évite style direct)
+                (el as HTMLElement).style.setProperty("--history-bg", rgba);
             } else {
                 el.classList.add("is-dimmed");
-                el.classList.remove("is-highlighted");
             }
         });
     }
+
+
+    // ───── UTILITAIRE ─────
+    private hexToRgba(hex: string, alpha: number) {
+        const trimmed = hex.replace("#", "");
+        const bigint = parseInt(trimmed, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
 
     selectSinglePerson(id: string) {
         this.selectedPersonIds.clear();

@@ -3,8 +3,7 @@ import RelationshipHousePlugin from "../main";
 import { OUTSIDE_HOUSE } from "../data/constants";
 import { getDisplayName } from "../data/personnes";
 import "emoji-picker-element";
-/* eslint-disable obsidianmd/ui/sentence-case */
-/* eslint-disable @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
+
 
 
 class EmojiPickerModal extends Modal {
@@ -35,11 +34,15 @@ class EmojiPickerModal extends Modal {
         this.plugin.registerDomEvent(
             picker as HTMLElement,
             "emoji-click" as unknown as keyof HTMLElementEventMap,
-            (e: any) => {
+            (event: Event) => {
+                const e = event as CustomEvent<{ unicode: string }>;
+
                 this.onSelect(e.detail.unicode);
                 this.close();
             }
         );
+
+
 
 
     }
@@ -126,7 +129,8 @@ export class RelationshipHouseSettingsTab extends PluginSettingTab {
         });
 
         // Bouton ajouter
-        const addBtn = container.createEl("button", { text: "+ Ajouter un groupe" });
+        const label = "+ Ajouter un groupe";
+        const addBtn = container.createEl("button", { text: label });
         addBtn.addClass("group-add-btn");
 
         addBtn.onclick = async () => {

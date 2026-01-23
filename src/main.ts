@@ -4,8 +4,10 @@ import { PluginData } from "./data/pluginData";
 import { DEFAULT_PERSONNES } from "./data/personnes";
 import { RelationshipHouseSettings, DEFAULT_SETTINGS } from "./settings";
 import { RelationshipHouseSettingsTab } from "./ui/SettingsTab";
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-call */
 
+type StoredData = Partial<PluginData> & {
+	settings?: Partial<RelationshipHouseSettings>;
+};
 
 export default class RelationshipHousePlugin extends Plugin {
 	data: PluginData;
@@ -30,7 +32,7 @@ export default class RelationshipHousePlugin extends Plugin {
 	}
 
 	async loadPluginData(): Promise<PluginData> {
-		const loaded = await this.loadData();
+		const loaded = (await this.loadData()) as StoredData | null;
 
 		if (!loaded) {
 			return {
@@ -45,8 +47,9 @@ export default class RelationshipHousePlugin extends Plugin {
 		};
 	}
 
+
 	async loadSettings() {
-		const loaded = await this.loadData();
+		const loaded = (await this.loadData()) as StoredData | null;
 
 		this.settings = {
 			...DEFAULT_SETTINGS,
@@ -54,22 +57,26 @@ export default class RelationshipHousePlugin extends Plugin {
 		};
 	}
 
+
 	async saveSettings() {
-		const existing = await this.loadData();
+		const existing = (await this.loadData()) as StoredData | null;
+
 		await this.saveData({
-			...existing,
+			...(existing ?? {}),
 			settings: this.settings
 		});
 	}
 
+
 	refreshHouseViews() {
 		this.app.workspace.iterateAllLeaves(leaf => {
-			const view = leaf.view as any;
-			if (view?.getViewType?.() === "relationship-house-view") {
-				view.refresh?.();
+			const view = leaf.view;
+			if (view.getViewType?.() === VIEW_TYPE_HOUSE) {
+				void (view as HouseView).refresh();
 			}
 		});
 	}
+
 
 	async savePluginData() {
 		await this.saveData(this.data);

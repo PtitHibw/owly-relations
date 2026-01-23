@@ -8,8 +8,6 @@ import { getPersonEmojis } from "./utils/groups";
 import { HistoryPanel } from "./ui/HistoryPanel";
 import { ContactsPanel } from "./ui/ContactsPanel";
 import { openPersonNote } from "./utils/openPersonNote";
-/* eslint-disable obsidianmd/ui/sentence-case */
-/* eslint-disable obsidianmd/no-static-styles-assignment */
 
 
 export const VIEW_TYPE_HOUSE = "relationship-house-view";
@@ -123,7 +121,9 @@ export class HouseView extends ItemView {
 
 		// Status / Coordinates
 		this.statusBar = statusZoomContainer.createDiv("house-coordinates");
-		this.statusBar.setText("X: -, Y: -");
+		const label = "X: -, Y: -";
+		this.statusBar.setText(label);
+
 
 		// ───────── COORDS QUI PRENNENT EN COMPTE ZOOM + PAN ─────────
 		this.svgWrapper.onmousemove = e => {
@@ -143,7 +143,9 @@ export class HouseView extends ItemView {
 
 
 		this.svgWrapper.onmouseleave = () => {
-			this.statusBar.setText("X: -, Y: -");
+			const label = "X: -, Y: -";
+			this.statusBar.setText(label);
+
 		};
 
 		// ───────── SCROLL ZOOM ─────────
@@ -201,15 +203,15 @@ export class HouseView extends ItemView {
 			if (settingsPiece?.description) {
 				pieceEl.oncontextmenu = (e) => {
 					e.preventDefault();
-					
+					e.stopPropagation();
 					pieceTooltip.setText(settingsPiece.description ?? "");
 					pieceTooltip.style.left = e.clientX + 12 + "px";
 					pieceTooltip.style.top = e.clientY + 12 + "px";
-					pieceTooltip.style.display = "block";
+					pieceTooltip.addClass("is-visible");
 				};
 			}
 			this.plugin.registerDomEvent(document, "click", () => {
-				pieceTooltip.style.display = "none";
+				pieceTooltip.removeClass("is-visible");
 			});
 
 
@@ -257,6 +259,8 @@ export class HouseView extends ItemView {
 				badge.dataset.personId = p.id;
 				badge.setAttr("data-tooltip", getFullName(p));
 				badge.addClass("has-tooltip");
+				badge.setAttr("tabindex", "0");
+
 
 				badge.ondragstart = e => {
 					e.dataTransfer?.setData("text/plain", p.id);
@@ -291,16 +295,32 @@ export class HouseView extends ItemView {
 
 	private updateSVGTransform() {
 		this.svgWrapper.style.transform = `translate(${this.svgOffset.x}px, ${this.svgOffset.y}px) scale(${this.svgScale})`;
-		this.svgWrapper.style.transformOrigin = "0 0";
 	}
 
 	refreshBadgeHighlight(selectedIds: Set<string>) {
-		this.contentEl.querySelectorAll(".person-badge").forEach(el => {
-			const id = el.getAttribute("data-person-id");
+		const badges = this.svgWrapper.querySelectorAll<HTMLElement>(".person-badge");
+		badges.forEach(el => {
+			const id = el.dataset.personId;
 			if (!id) return;
-			if (selectedIds.size === 0) el.classList.remove("is-dimmed", "is-highlighted");
-			else if (selectedIds.has(id)) { el.classList.add("is-highlighted"); el.classList.remove("is-dimmed"); }
-			else { el.classList.add("is-dimmed"); el.classList.remove("is-highlighted"); }
+			const person = this.plugin.data.personnes.find(p => p.id === id);
+			const color = person?.couleur ?? "gray";
+
+			if (selectedIds.size === 0) {
+				el.classList.remove("is-dimmed", "is-highlighted");
+				el.style.backgroundColor = color;
+			}
+			else if (selectedIds.has(id)) {
+				el.classList.add("is-highlighted");
+				el.classList.remove("is-dimmed");
+				el.style.backgroundColor = color;
+			}
+			else {
+				el.classList.add("is-dimmed");
+				el.classList.remove("is-highlighted");
+				el.style.backgroundColor = color;
+			}
 		});
 	}
+
+
 }

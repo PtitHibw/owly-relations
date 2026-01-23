@@ -7,8 +7,7 @@ import { getDisplayName } from "../data/personnes";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { getPersonEmojis } from "../utils/groups";
 import { openPersonNote } from "../utils/openPersonNote";
-/* eslint-disable obsidianmd/ui/sentence-case */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-misused-promises */
+
 
 
 export class ContactsPanel {
@@ -95,14 +94,18 @@ export class ContactsPanel {
 
             this.render(); // refresh panel
             this.plugin.app.workspace.iterateAllLeaves(leaf => {
-                const view = leaf.view as any;
-                if ("refresh" in view) view.refresh();
+                const view = leaf.view;
+                if ("refresh" in view) {
+                    (view as { refresh: () => void }).refresh();
+                }
             });
+
         };
         const footer = content.createDiv("contacts-footer");
 
         // dans ContactsPanel.render() -> footer
-        const addBtn = footer.createEl("button", { text: "+ Ajouter un contact" });
+        const label = "+ Ajouter un contact";
+        const addBtn = footer.createEl("button", { text: label });
         addBtn.onclick = () =>
             new PersonModal(
                 this.plugin.app,
@@ -160,20 +163,34 @@ export class ContactsPanel {
             new ConfirmDeleteModal(
                 this.plugin.app,
                 `Supprimer le contact « ${getDisplayName(p)} » ?`,
-                async () => {
-                    p.pieceId = undefined;
-                    this.plugin.data.personnes =
-                        this.plugin.data.personnes.filter(person => person.id !== p.id);
+                () => {
+                    void (async () => {
+                        // Expulsion si la personne est dans une pièce
+                        if (p.pieceId) {
+                            this.plugin.data.historique.push({
+                                id: Date.now().toString(),
+                                personneId: p.id,
+                                personneNom: getDisplayName(p),
+                                personneCouleur: p.couleur,
+                                pieceFrom: p.pieceId,
+                                pieceTo: OUTSIDE_HOUSE,
+                                date: new Date().toISOString(),
+                            });
+                        }
 
-                    await this.plugin.savePluginData();
-                    this.render();
+                        // Supprimer la personne
+                        this.plugin.data.personnes = this.plugin.data.personnes.filter(person => person.id !== p.id);
 
-                    this.plugin.app.workspace.iterateAllLeaves(leaf => {
-                        const view = leaf.view as any;
-                        if ("refresh" in view) view.refresh();
-                    });
-                }
-            ).open();
+                        await this.plugin.savePluginData();
+                        this.render();
+
+                        // Rafraîchir toutes les vues
+                        this.plugin.app.workspace.iterateAllLeaves(leaf => {
+                            const view = leaf.view;
+                            if ("refresh" in view) (view as { refresh: () => void }).refresh();
+                        });
+                    })();
+                }).open();
         };
 
         // draggable

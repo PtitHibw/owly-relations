@@ -2,8 +2,9 @@ import { App, Modal, Setting } from "obsidian";
 import RelationshipHousePlugin from "../main";
 import { Personne } from "../data/personnes";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
-/* eslint-disable obsidianmd/ui/sentence-case */
-/* eslint-disable @typescript-eslint/no-misused-promises */
+import { getDisplayName } from "../data/personnes";
+import { OUTSIDE_HOUSE } from "../data/constants";
+
 
 export class PersonModal extends Modal {
     private data: Partial<Personne>;
@@ -46,8 +47,9 @@ export class PersonModal extends Modal {
         );
 
         /* ───────── IDENTITÉ ───────── */
+        const label_identite = "- IDENTITÉ -";
         new Setting(contentEl)
-            .setName("- IDENTITÉ -")
+            .setName(label_identite)
             .setHeading();
 
         
@@ -78,8 +80,9 @@ export class PersonModal extends Modal {
         
 
         /* ───────── INFOS ───────── */
+        const label_informations = "- INFORMATIONS -";
         new Setting(contentEl)
-            .setName("- INFORMATIONS -")
+            .setName(label_informations)
             .setHeading();
 
 
@@ -102,14 +105,13 @@ export class PersonModal extends Modal {
         new Setting(contentEl)
             .setName("Groupes")
             .then(setting => {
-                // IMPORTANT : on nettoie le controlEl
                 setting.controlEl.empty();
                 this.renderNativeGroupSelector(setting.controlEl);
             });
 
         new Setting(contentEl)
             .setName("Note liée")
-            .setDesc("Double Clic pour y accéder")
+            .setDesc("Double clic pour y accéder")
             .then(setting => {
                 setting.controlEl.empty();
                 this.renderNoteInput(setting.controlEl);
@@ -117,8 +119,9 @@ export class PersonModal extends Modal {
 
 
         /* ───────── COMMENTAIRE ───────── */
+        const label_commentaire = "- COMMENTAIRE -";
         new Setting(contentEl)
-            .setName("- COMMENTAIRE -")
+            .setName(label_commentaire)
             .setHeading();
 
 
@@ -137,20 +140,42 @@ export class PersonModal extends Modal {
                 cls: "mod-warning"
             });
 
+            const deletePerson = async () => {
+                const removedPerson = this.plugin.data.personnes.find(p => p.id === this.data.id);
+
+                if (removedPerson?.pieceId) {
+                    this.plugin.data.historique.push({
+                        id: Date.now().toString(),
+                        personneId: removedPerson.id,
+                        personneNom: getDisplayName(removedPerson),
+                        personneCouleur: removedPerson.couleur,
+                        pieceFrom: removedPerson.pieceId,
+                        pieceTo: OUTSIDE_HOUSE,
+                        date: new Date().toISOString(),
+                    });
+                }
+
+                this.plugin.data.personnes = this.plugin.data.personnes.filter(p => p.id !== this.data.id);
+
+                await this.plugin.savePluginData();
+
+                if (this.onSave) this.onSave();
+                this.plugin.app.workspace.iterateAllLeaves(leaf => {
+                    const view = leaf.view;
+                    if ("refresh" in view) (view as { refresh: () => void }).refresh();
+                });
+
+                this.close();
+            }
+
             deleteBtn.onclick = () => {
                 new ConfirmDeleteModal(
                     this.app,
                     "Supprimer définitivement ce contact ?",
-                    async () => {
-                        this.plugin.data.personnes =
-                            this.plugin.data.personnes.filter(p => p.id !== this.data.id);
-
-                        await this.plugin.savePluginData();
-                        this.onSave();
-                        this.close();
-                    }
+                    () => { void deletePerson(); } // TS accepte void return
                 ).open();
             };
+
         }
 
         const saveBtn = footer.createEl("button", {
