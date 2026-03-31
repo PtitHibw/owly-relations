@@ -1,7 +1,7 @@
 {
 	"id": "owly-relations",
 	"name": "OwlyRelations",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"minAppVersion": "0.15.0",
 	"description": "A plugin about managing your relations in a virtual house.",
 	"author": "PtitHibw",
