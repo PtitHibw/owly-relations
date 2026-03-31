@@ -160,7 +160,7 @@ export default class RelationshipHousePlugin extends Plugin {
     }
 
     getAssetsPath(): string {
-        return normalizePath(this.manifest.dir + "/assets");
+        return normalizePath(this.manifest.dir + "/");
     }
 
     async activateView() {
