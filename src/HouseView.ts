@@ -69,7 +69,13 @@ export class HouseView extends ItemView {
 		const personnes = maison.personnes;
 
 		const svgPath = normalizePath(this.assetsPath + "/house.svg");
-		const svg = await this.app.vault.adapter.read(svgPath);
+		let svg: string;
+		try {
+			svg = await this.app.vault.adapter.read(svgPath);
+		} catch {
+			this.renderMissingSvgMessage(container);
+			return;
+		}
 
 		// ───────── SVG WRAPPER ─────────
 		this.svgWrapper = container.createDiv("house-svg-wrapper");
@@ -271,6 +277,38 @@ export class HouseView extends ItemView {
 
 	private updateSVGTransform() {
 		this.svgWrapper.style.transform = `translate(${this.svgOffset.x}px, ${this.svgOffset.y}px) scale(${this.svgScale})`;
+	}
+
+	private renderMissingSvgMessage(container: HTMLElement) {
+		const wrapper = container.createDiv("missing-svg-wrapper");
+
+		wrapper.createEl("h2", { text: "Fichier manquant" });
+		wrapper.createEl("p", { text: "Le fichier house.svg est introuvable dans le dossier du plugin." });
+ 
+		const link = wrapper.createEl("a", {
+			text: "Télécharger le ici (en cliquant sur house.svg)",
+			href: "https://github.com/PtitHibw/owly-relations/releases/latest"
+		});
+		link.setAttr("target", "_blank");
+		wrapper.createEl("p", { text: " " });
+		wrapper.createEl("code", { text: "Glissez le ensuite depuis votre dossier de téléchargement vers " });
+		
+
+		const openBtn = wrapper.createEl("a", { text: "ce dossier" });
+		openBtn.addClass("mod-cta");
+		openBtn.onclick = () => {
+			const pluginDir = (this.app.vault.adapter as any).getFullPath(
+				this.app.vault.configDir + "/plugins/owly-relations"
+			);
+			const { shell } = require("electron");
+			shell.openPath(pluginDir);
+		};
+		
+		wrapper.createEl("p", { text: " " });
+		const reloadBtn = wrapper.createEl("button", { text: "Recharger Obsidian" });
+		reloadBtn.onclick = () => {
+			(this.app as any).commands.executeCommandById("app:reload");
+		};
 	}
 
 	refreshBadgeHighlight(selectedIds: Set<string>) {
