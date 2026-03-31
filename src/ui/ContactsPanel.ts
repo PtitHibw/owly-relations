@@ -8,15 +8,12 @@ import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { getPersonEmojis } from "../utils/groups";
 import { openPersonNote } from "../utils/openPersonNote";
 
-
-
 export class ContactsPanel {
     private searchInput!: HTMLInputElement;
     private listEl!: HTMLElement;
     private selectedIds = new Set<string>();
     private suggestionsEl!: HTMLElement;
     private selectedWrapper!: HTMLElement;
-
 
     constructor(
         private container: HTMLElement,
@@ -27,7 +24,6 @@ export class ContactsPanel {
         this.container.empty();
         this.container.addClass("side-panel", "right");
 
-        // ─── HEADER ───
         const header = this.container.createDiv("side-header");
 
         const toggleBtn = header.createEl("button", {
@@ -42,20 +38,13 @@ export class ContactsPanel {
         title.setText("Contacts");
 
         const content = this.container.createDiv("side-content");
-
-
-        
-
         this.listEl = content.createDiv("contacts-list");
 
-        
-        
         // ─── RENDER CONTACTS ───
-        this.plugin.data.personnes
+        const maison = this.plugin.getActiveMaison();
+        maison.personnes
             .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)))
             .forEach(p => this.renderPersonItem(p));
-
-
 
         // ─── DRAG FROM CONTACTS ───
         this.container.ondragover = e => e.preventDefault();
@@ -64,20 +53,20 @@ export class ContactsPanel {
 
             const id = e.dataTransfer?.getData("text/plain");
             const source = e.dataTransfer?.getData("source");
-
             if (!id) return;
 
-            const person = this.plugin.data.personnes.find(p => p.id === id);
+            const maison = this.plugin.getActiveMaison();
+            const person = maison.personnes.find(p => p.id === id);
             if (!person) return;
 
-            // ⛔ drag CONTACT → CONTACT = rien
+            // drag CONTACT → CONTACT = rien
             if (source === "contact") return;
 
-            // ✅ drag BADGE → CONTACTS = sortir de la maison
+            // drag BADGE → CONTACTS = sortir de la maison
             const from = person.pieceId ?? OUTSIDE_HOUSE;
             if (from === OUTSIDE_HOUSE) return;
 
-            this.plugin.data.historique.push({
+            maison.historique.push({
                 id: Date.now().toString(),
                 personneId: person.id,
                 personneNom: getDisplayName(person),
@@ -87,38 +76,26 @@ export class ContactsPanel {
                 date: new Date().toISOString()
             });
 
-
-            // Supprime la personne de la maison
             person.pieceId = undefined;
             await this.plugin.savePluginData();
 
-            this.render(); // refresh panel
+            this.render();
             this.plugin.app.workspace.iterateAllLeaves(leaf => {
                 const view = leaf.view;
                 if ("refresh" in view) {
                     (view as { refresh: () => void }).refresh();
                 }
             });
-
         };
-        const footer = content.createDiv("contacts-footer");
 
-        // dans ContactsPanel.render() -> footer
-        const label = "+ Ajouter un contact";
-        const addBtn = footer.createEl("button", { text: label });
+        const footer = content.createDiv("contacts-footer");
+        const addBtn = footer.createEl("button", { text: "+ Ajouter un contact" });
         addBtn.onclick = () =>
             new PersonModal(
                 this.plugin.app,
                 this.plugin,
-                () => {
-                    // Callback onSave
-                    this.render(); // rafraîchit la liste des contacts
-                    // Si tu veux aussi rafraîchir la maison, tu peux passer un callback depuis HouseView
-                }
+                () => { this.render(); }
             ).open();
-
-
-
     }
 
     private renderPersonItem(p: Personne) {
@@ -133,15 +110,9 @@ export class ContactsPanel {
             openPersonNote(this.plugin.app, p);
         };
 
-
-        // texte 
         const nameSpan = item.createSpan();
-        const emojis = getPersonEmojis(this.plugin, p.groupes);
-        nameSpan.setText(`${getDisplayName(p)} ${emojis}`);
+        nameSpan.setText(`${getDisplayName(p)} ${getPersonEmojis(this.plugin, p.groupes)}`);
 
-
-
-        // boutons droite
         const buttonsWrapper = item.createDiv("buttons-wrapper");
 
         const editBtn = buttonsWrapper.createEl("button", { text: "✎" });
@@ -153,21 +124,21 @@ export class ContactsPanel {
                 () => this.render(),
                 p
             ).open();
-
         };
 
         const deleteBtn = buttonsWrapper.createEl("button", { text: "🗑" });
         deleteBtn.onclick = e => {
             e.stopPropagation();
-
             new ConfirmDeleteModal(
                 this.plugin.app,
                 `Supprimer le contact « ${getDisplayName(p)} » ?`,
                 () => {
                     void (async () => {
-                        // Expulsion si la personne est dans une pièce
+                        const maison = this.plugin.getActiveMaison();
+
+                        // Expulsion si dans une pièce
                         if (p.pieceId) {
-                            this.plugin.data.historique.push({
+                            maison.historique.push({
                                 id: Date.now().toString(),
                                 personneId: p.id,
                                 personneNom: getDisplayName(p),
@@ -178,35 +149,31 @@ export class ContactsPanel {
                             });
                         }
 
-                        // Supprimer la personne
-                        this.plugin.data.personnes = this.plugin.data.personnes.filter(person => person.id !== p.id);
+                        maison.personnes = maison.personnes.filter(person => person.id !== p.id);
 
                         await this.plugin.savePluginData();
                         this.render();
 
-                        // Rafraîchir toutes les vues
                         this.plugin.app.workspace.iterateAllLeaves(leaf => {
                             const view = leaf.view;
                             if ("refresh" in view) (view as { refresh: () => void }).refresh();
                         });
                     })();
-                }).open();
+                }
+            ).open();
         };
 
-        // draggable
         item.setAttr("draggable", "true");
         item.ondragstart = e => {
             e.dataTransfer?.setData("text/plain", p.id);
             e.dataTransfer?.setData("source", "contact");
         };
-
     }
 
     renderContactsFilter() {
         this.listEl.querySelectorAll(".contact-item").forEach(el => {
             const id = el.getAttribute("data-person-id");
             if (!id) return;
-
             if (this.selectedIds.size === 0 || this.selectedIds.has(id)) {
                 el.removeAttribute("hidden");
             } else {
@@ -214,5 +181,4 @@ export class ContactsPanel {
             }
         });
     }
-
 }

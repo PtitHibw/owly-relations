@@ -23,7 +23,6 @@ export class HistoryPanel {
         private onSelectionChange: (ids: Set<string>) => void
     ) { }
 
-    // ───────── RENDER ─────────
     render() {
         this.container.empty();
         this.container.addClass("side-panel", "left", "history-panel");
@@ -51,17 +50,14 @@ export class HistoryPanel {
             if (e.key === "Escape") this.clearSelection();
         });
 
-
         this.plugin.registerDomEvent(document, "click", (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             if (
                 target.closest(".history-panel") ||
                 target.closest(".person-badge")
             ) return;
-
             this.clearSelection();
         });
-
     }
 
     clearSelection() {
@@ -69,10 +65,8 @@ export class HistoryPanel {
         this.syncSelection();
     }
 
-    // ───────── SEARCH ─────────
     renderSearch() {
         const wrapper = this.contentEl.createDiv("history-search");
-
         this.selectedWrapper = wrapper.createDiv("history-search-selected");
 
         this.searchInput = wrapper.createEl("input", {
@@ -81,7 +75,6 @@ export class HistoryPanel {
         });
 
         this.suggestionsEl = wrapper.createDiv("history-suggestions");
-        
 
         this.searchInput.oninput = () => {
             const value = this.searchInput.value.toLowerCase();
@@ -89,7 +82,6 @@ export class HistoryPanel {
 
             if (!value) {
                 this.suggestionsEl.removeClass("is-open");
-
                 return;
             }
 
@@ -101,8 +93,6 @@ export class HistoryPanel {
                             !this.selectedPersonIds.has(item.id)
                         );
                     }
-
-                    // groupe
                     return (
                         item.label.toLowerCase().includes(value) ||
                         item.emoji.includes(value) ||
@@ -113,8 +103,6 @@ export class HistoryPanel {
                     const el = this.suggestionsEl.createDiv("history-suggestion");
                     el.setText(item.label);
                     el.addClass(item.type === "group" ? "is-group" : "is-person");
-
-
                     el.onclick = e => {
                         e.stopPropagation();
                         this.onSearchItemSelected(item);
@@ -122,7 +110,6 @@ export class HistoryPanel {
                 });
 
             this.suggestionsEl.toggleClass("is-open", !!value);
-
         };
     }
 
@@ -132,15 +119,14 @@ export class HistoryPanel {
             return;
         }
 
-        // GROUPE → ajouter toutes les personnes du groupe
-        this.plugin.data.personnes
+        // GROUPE → ajouter toutes les personnes du groupe (maison active)
+        this.plugin.getActiveMaison().personnes
             .filter(p => p.groupes?.includes(item.id))
             .forEach(p => this.selectedPersonIds.add(p.id));
 
         this.syncSelection();
         this.searchInput.value = "";
         this.suggestionsEl.removeClass("is-open");
-
     }
 
     private addPerson(id: string) {
@@ -153,19 +139,18 @@ export class HistoryPanel {
         this.selectedWrapper.empty();
 
         this.selectedPersonIds.forEach(id => {
-            const person = this.plugin.data.personnes.find(p => p.id === id);
+            const maison = this.plugin.getActiveMaison();
+            const person = maison.personnes.find(p => p.id === id);
             if (!person) return;
 
             const badge = this.selectedWrapper.createDiv("search-badge");
             badge.setText(getDisplayName(person));
-            badge.addClass("search-badge")
-            badge.style.backgroundColor = person.couleur ?? "#999"
-            
+            badge.addClass("search-badge");
+            badge.style.backgroundColor = person.couleur ?? "#999";
 
             const close = badge.createSpan();
             close.setText("✕");
-            close.addClass("close")
-
+            close.addClass("close");
             close.onclick = e => {
                 e.stopPropagation();
                 this.selectedPersonIds.delete(id);
@@ -174,23 +159,21 @@ export class HistoryPanel {
         });
     }
 
-    // ───────── LIST ─────────
     renderList() {
         this.listEl = this.contentEl.createDiv("history-list");
+        const maison = this.plugin.getActiveMaison();
 
-        [...this.plugin.data.historique].reverse().forEach(move => {
+        [...maison.historique].reverse().forEach(move => {
             const item = this.listEl.createDiv("history-item");
             item.dataset.personId = move.personneId;
 
-            const person = this.plugin.data.personnes.find(p => p.id === move.personneId);
+            const person = maison.personnes.find(p => p.id === move.personneId);
             const color = person?.couleur ?? move.personneCouleur ?? "#888";
             item.dataset.personColor = color;
 
-            // ── Colonne 1 : Nom
             const nameEl = item.createDiv("history-person");
             nameEl.setText(person ? getDisplayName(person) : move.personneNom);
 
-            // ── Colonne 2 : Déplacement + Date/Heure
             const detailsEl = item.createDiv("history-details");
             detailsEl.createDiv("history-move-line").setText(
                 `${move.pieceFrom === OUTSIDE_HOUSE ? "CONTACTS" : move.pieceFrom} → ${move.pieceTo === OUTSIDE_HOUSE ? "CONTACTS" : move.pieceTo}`
@@ -200,14 +183,10 @@ export class HistoryPanel {
                 `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
             );
 
-            // ── Colonne 3 : Commentaire
             const commentBtn = item.createDiv("history-comment-btn");
             commentBtn.setText("💬");
-            commentBtn.addClass("history-comment-btn")
-            
+            commentBtn.addClass("history-comment-btn");
             commentBtn.toggleClass("inactive", !move.commentaire);
-
-
 
             commentBtn.onclick = e => {
                 e.stopPropagation();
@@ -220,8 +199,8 @@ export class HistoryPanel {
                             await this.plugin.savePluginData();
                             this.render();
                         })();
-
-                    }).open();
+                    }
+                ).open();
             };
 
             item.onclick = () => this.selectSinglePerson(move.personneId);
@@ -230,36 +209,21 @@ export class HistoryPanel {
         });
     }
 
-
-
-
-    
-    // ───────── DATA ─────────
     getSearchItems(): SearchItem[] {
         const items: SearchItem[] = [];
+        const maison = this.plugin.getActiveMaison();
 
-        // Contacts existants
-        this.plugin.data.personnes.forEach(p =>
-            items.push({
-                type: "person",
-                id: p.id,
-                label: getDisplayName(p)
-            })
+        maison.personnes.forEach(p =>
+            items.push({ type: "person", id: p.id, label: getDisplayName(p) })
         );
 
         // Contacts supprimés mais présents dans l'historique
-        this.plugin.data.historique.forEach(move => {
-            // Si id déjà présent, ignore
+        maison.historique.forEach(move => {
             if (!items.some(i => i.type === "person" && i.id === move.personneId)) {
-                items.push({
-                    type: "person",
-                    id: move.personneId,
-                    label: move.personneNom
-                });
+                items.push({ type: "person", id: move.personneId, label: move.personneNom });
             }
         });
 
-        // Groupes
         this.plugin.settings.groupes.forEach(g =>
             items.push({
                 type: "group",
@@ -272,32 +236,24 @@ export class HistoryPanel {
         return items;
     }
 
-
-    // ───────── SYNC ─────────
     private syncSelection() {
         this.onSelectionChange(new Set(this.selectedPersonIds));
         this.renderSelectedBadges();
         this.refreshHighlight();
     }
 
-
     private refreshHighlight() {
         document.querySelectorAll(".history-item").forEach(el => {
             const id = el.getAttribute("data-person-id");
             const color = el.getAttribute("data-person-color") ?? "#888";
-
-            // Couleur adoucie
             const rgba = this.hexToRgba(color, 0.2);
 
             el.classList.remove("is-dimmed", "is-highlighted", "highlighted-temp");
 
-            if (!id || this.selectedPersonIds.size === 0) {
-                return;
-            }
+            if (!id || this.selectedPersonIds.size === 0) return;
 
             if (this.selectedPersonIds.has(id)) {
                 el.classList.add("is-highlighted", "highlighted-temp");
-                // applique couleur via variable CSS sur le parent (évite style direct)
                 (el as HTMLElement).style.setProperty("--history-bg", rgba);
             } else {
                 el.classList.add("is-dimmed");
@@ -305,8 +261,6 @@ export class HistoryPanel {
         });
     }
 
-
-    // ───── UTILITAIRE ─────
     private hexToRgba(hex: string, alpha: number) {
         const trimmed = hex.replace("#", "");
         const bigint = parseInt(trimmed, 16);
@@ -315,7 +269,6 @@ export class HistoryPanel {
         const b = bigint & 255;
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
-
 
     selectSinglePerson(id: string) {
         this.selectedPersonIds.clear();

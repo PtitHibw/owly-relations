@@ -62,11 +62,14 @@ export class HouseView extends ItemView {
 		contacts.render();
 	}
 
-	async renderHouse(container: HTMLElement) {
-		const svgPath = normalizePath(this.assetsPath + "/house.svg");
-		// Asset du plugin → hors vault → adapter.read obligatoire
-		const svg = await this.app.vault.adapter.read(svgPath);
+	// ──────────────────────────────────────────────────────────────────────────
 
+	async renderHouse(container: HTMLElement) {
+		const maison = this.plugin.getActiveMaison();
+		const personnes = maison.personnes;
+
+		const svgPath = normalizePath(this.assetsPath + "/house.svg");
+		const svg = await this.app.vault.adapter.read(svgPath);
 
 		// ───────── SVG WRAPPER ─────────
 		this.svgWrapper = container.createDiv("house-svg-wrapper");
@@ -80,20 +83,14 @@ export class HouseView extends ItemView {
 		}
 
 		const importedSvg = document.importNode(svgEl, true);
-
 		this.svgWrapper.appendChild(importedSvg);
 
-
 		const overlay = this.svgWrapper.createDiv("house-overlay");
-		
 		const pieceTooltip = document.body.createDiv("piece-tooltip");
-		
 
 		// ───────── STATUS BAR + ZOOM CONTROLS ─────────
 		const statusZoomContainer = container.createDiv("house-status-bar");
 
-		
-		// Zoom buttons +/-
 		["+", "-"].forEach(text => {
 			const btn = statusZoomContainer.createEl("button");
 			btn.setText(text);
@@ -101,11 +98,9 @@ export class HouseView extends ItemView {
 			btn.onclick = () => this.zoomSVG(text === "+" ? 1.1 : 0.9);
 		});
 
-		// Divider
 		const divider1 = statusZoomContainer.createDiv("house-zoom-divider");
 		divider1.setText("|");
 
-		// Reset button
 		const resetBtn = statusZoomContainer.createEl("button");
 		resetBtn.setText("Reset");
 		resetBtn.addClass("house-zoom-btn");
@@ -115,44 +110,45 @@ export class HouseView extends ItemView {
 			this.updateSVGTransform();
 		};
 
-		// Divider
 		const divider2 = statusZoomContainer.createDiv("house-zoom-divider");
 		divider2.setText("|");
 
-		// Status / Coordinates
 		this.statusBar = statusZoomContainer.createDiv("house-coordinates");
-		const label = "X: -, Y: -";
-		this.statusBar.setText(label);
+		this.statusBar.setText("X: -, Y: -");
 
+		// Divider
+		const divider3 = statusZoomContainer.createDiv("house-zoom-divider");
+		divider3.setText("|");
 
-		// ───────── COORDS QUI PRENNENT EN COMPTE ZOOM + PAN ─────────
+		// Sélecteur de maison
+		const maisonSelect = statusZoomContainer.createEl("select");
+		maisonSelect.addClass("house-maison-select");
+		this.plugin.data.maisons.forEach(m => {
+    		const opt = maisonSelect.createEl("option", { text: m.nom, value: m.id });
+			if (m.id === this.plugin.data.activeMaisonId) opt.selected = true;
+		});
+		maisonSelect.onchange = async () => {
+    		await this.plugin.setActiveMaison(maisonSelect.value);
+		};
+
+		// ───────── COORDS ─────────
 		this.svgWrapper.onmousemove = e => {
-			
 			const svgEl = this.svgWrapper.querySelector("svg")!;
 			const pt = svgEl.createSVGPoint();
 			pt.x = e.clientX;
 			pt.y = e.clientY;
 			const svgCoords = pt.matrixTransform(svgEl.getScreenCTM()!.inverse());
-			const svgX = svgCoords.x;
-			const svgY = svgCoords.y;
-
-
-			this.statusBar.setText(`X: ${Math.round(svgX)}, Y: ${Math.round(svgY)}`);
+			this.statusBar.setText(`X: ${Math.round(svgCoords.x)}, Y: ${Math.round(svgCoords.y)}`);
 		};
 
-
-
 		this.svgWrapper.onmouseleave = () => {
-			const label = "X: -, Y: -";
-			this.statusBar.setText(label);
-
+			this.statusBar.setText("X: -, Y: -");
 		};
 
 		// ───────── SCROLL ZOOM ─────────
 		this.svgWrapper.onwheel = e => {
 			e.preventDefault();
-			const factor = e.deltaY > 0 ? 0.9 : 1.1;
-			this.zoomSVG(factor, e.clientX, e.clientY);
+			this.zoomSVG(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY);
 		};
 
 		// ───────── PAN MIDDLE CLICK ─────────
@@ -162,15 +158,13 @@ export class HouseView extends ItemView {
 				this.isPanning = true;
 				this.panStart = { x: e.clientX - this.svgOffset.x, y: e.clientY - this.svgOffset.y };
 				this.svgWrapper.addClass("is-panning");
-
 			}
 		};
 
-		this.plugin.registerDomEvent(document, "mouseup", e => {
+		this.plugin.registerDomEvent(document, "mouseup", () => {
 			if (this.isPanning) {
 				this.isPanning = false;
 				this.svgWrapper.removeClass("is-panning");
-
 			}
 		});
 
@@ -184,21 +178,15 @@ export class HouseView extends ItemView {
 		this.updateSVGTransform();
 
 		// ───────── BADGES ─────────
-		const personnes = this.plugin.data.personnes;
-		
 		DEFAULT_PIECES.forEach(piece => {
 			const settingsPiece = this.plugin.settings.pieces?.find(p => p.id === piece.id);
-
 			if (settingsPiece?.visible === false) return;
-
 
 			const pieceEl = overlay.createDiv("house-piece");
 			pieceEl.style.left = piece.x + "px";
 			pieceEl.style.top = piece.y + "px";
 			pieceEl.style.width = piece.width + "px";
 			pieceEl.style.height = piece.height + "px";
-
-
 
 			if (settingsPiece?.description) {
 				pieceEl.oncontextmenu = (e) => {
@@ -214,15 +202,10 @@ export class HouseView extends ItemView {
 				pieceTooltip.removeClass("is-visible");
 			});
 
-
-			// Label de la pièce
 			const labelEl = pieceEl.createDiv("piece-label");
 			labelEl.setText(settingsPiece?.label ?? piece.nom);
-			
 
-			// Container pour badges
 			const badgesContainer = pieceEl.createDiv("house-badges");
-
 
 			pieceEl.ondragover = e => e.preventDefault();
 			pieceEl.ondrop = async e => {
@@ -236,7 +219,8 @@ export class HouseView extends ItemView {
 				const to = piece.id;
 				if (from === to) return;
 
-				this.plugin.data.historique.push({
+				// ← on push dans l'historique de la maison active
+				maison.historique.push({
 					id: Date.now().toString(),
 					personneId: person.id,
 					personneNom: getDisplayName(person),
@@ -261,7 +245,6 @@ export class HouseView extends ItemView {
 				badge.addClass("has-tooltip");
 				badge.setAttr("tabindex", "0");
 
-
 				badge.ondragstart = e => {
 					e.dataTransfer?.setData("text/plain", p.id);
 					e.dataTransfer?.setData("source", "badge");
@@ -269,58 +252,46 @@ export class HouseView extends ItemView {
 				badge.onclick = e => { e.stopPropagation(); this.historyPanel.selectSinglePerson(p.id); };
 				badge.ondblclick = e => { e.stopPropagation(); openPersonNote(this.app, p); };
 			});
-
 		});
 	}
-
 
 	private zoomSVG(factor: number, centerX?: number, centerY?: number) {
 		if (centerX !== undefined && centerY !== undefined) {
 			const rect = this.svgWrapper.getBoundingClientRect();
-
-			// Coordonnées du curseur relative au SVG
 			const svgCursorX = (centerX - rect.left - this.svgOffset.x) / this.svgScale;
 			const svgCursorY = (centerY - rect.top - this.svgOffset.y) / this.svgScale;
-
-			// Ajuste l'offset pour que le point sous le curseur reste fixe
 			this.svgOffset.x -= (factor - 1) * svgCursorX * this.svgScale;
 			this.svgOffset.y -= (factor - 1) * svgCursorY * this.svgScale;
 		}
-
 		this.svgScale *= factor;
 		this.updateSVGTransform();
 	}
-
-
 
 	private updateSVGTransform() {
 		this.svgWrapper.style.transform = `translate(${this.svgOffset.x}px, ${this.svgOffset.y}px) scale(${this.svgScale})`;
 	}
 
 	refreshBadgeHighlight(selectedIds: Set<string>) {
+		const personnes = this.plugin.getActiveMaison().personnes;
 		const badges = this.svgWrapper.querySelectorAll<HTMLElement>(".person-badge");
 		badges.forEach(el => {
 			const id = el.dataset.personId;
 			if (!id) return;
-			const person = this.plugin.data.personnes.find(p => p.id === id);
+			const person = personnes.find(p => p.id === id);
 			const color = person?.couleur ?? "gray";
 
 			if (selectedIds.size === 0) {
 				el.classList.remove("is-dimmed", "is-highlighted");
 				el.style.backgroundColor = color;
-			}
-			else if (selectedIds.has(id)) {
+			} else if (selectedIds.has(id)) {
 				el.classList.add("is-highlighted");
 				el.classList.remove("is-dimmed");
 				el.style.backgroundColor = color;
-			}
-			else {
+			} else {
 				el.classList.add("is-dimmed");
 				el.classList.remove("is-highlighted");
 				el.style.backgroundColor = color;
 			}
 		});
 	}
-
-
 }

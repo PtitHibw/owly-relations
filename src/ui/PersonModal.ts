@@ -5,7 +5,6 @@ import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { getDisplayName } from "../data/personnes";
 import { OUTSIDE_HOUSE } from "../data/constants";
 
-
 export class PersonModal extends Modal {
     private data: Partial<Personne>;
 
@@ -16,7 +15,6 @@ export class PersonModal extends Modal {
         person?: Personne
     ) {
         super(app);
-
         this.data = person
             ? { ...person }
             : {
@@ -30,76 +28,46 @@ export class PersonModal extends Modal {
             };
     }
 
-    onOpen() {
-        this.render();
-    }
+    onOpen() { this.render(); }
 
-    /* ───────────────────────────── */
-    /* RENDER PRINCIPAL              */
-    /* ───────────────────────────── */
     private render() {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.addClass("person-modal");
 
-        this.titleEl.setText(
-            this.isEdit() ? "Modifier un contact" : "Ajouter un contact"
-        );
+        this.titleEl.setText(this.isEdit() ? "Modifier un contact" : "Ajouter un contact");
 
-        /* ───────── IDENTITÉ ───────── */
-        const label_identite = "- IDENTITÉ -";
-        new Setting(contentEl)
-            .setName(label_identite)
-            .setHeading();
+        new Setting(contentEl).setName("- IDENTITÉ -").setHeading();
 
-        
         new Setting(contentEl)
             .setName("Surnom")
             .setDesc("Affiché sur les badges si présent")
-            .addText(t =>
-                t.setValue(this.data.surnom ?? "")
-                    .onChange(v => (this.data.surnom = v))
-            );
+            .addText(t => t.setValue(this.data.surnom ?? "").onChange(v => (this.data.surnom = v)));
 
         new Setting(contentEl)
             .setName("Prénom")
             .setDesc("Optionnel")
-            .addText(t =>
-                t.setValue(this.data.prenom ?? "")
-                    .onChange(v => (this.data.prenom = v))
-            );
+            .addText(t => t.setValue(this.data.prenom ?? "").onChange(v => (this.data.prenom = v)));
 
         new Setting(contentEl)
             .setName("Nom")
             .setDesc("Optionnel")
-            .addText(t =>
-                t.setValue(this.data.nom ?? "")
-                    .onChange(v => (this.data.nom = v))
-            );
+            .addText(t => t.setValue(this.data.nom ?? "").onChange(v => (this.data.nom = v)));
 
-        
-
-        /* ───────── INFOS ───────── */
-        const label_informations = "- INFORMATIONS -";
-        new Setting(contentEl)
-            .setName(label_informations)
-            .setHeading();
-
+        new Setting(contentEl).setName("- INFORMATIONS -").setHeading();
 
         new Setting(contentEl)
             .setName("Date de naissance")
             .addText(t => {
                 t.inputEl.type = "date";
-                t.setValue(this.data.naissance ?? "")
-                    .onChange(v => (this.data.naissance = v));
+                t.setValue(this.data.naissance ?? "").onChange(v => (this.data.naissance = v));
             });
 
         new Setting(contentEl)
             .setName("Couleur du badge")
             .setDesc("Couleur associée à cette personne")
             .addColorPicker(c =>
-                c.setValue(this.data.couleur ?? "#888888")
-                    .onChange(v => (this.data.couleur = v))
+                c.setValue(this.data.couleur ?? "#888888").onChange(v => (this.data.couleur = v))
             );
 
         new Setting(contentEl)
@@ -117,13 +85,7 @@ export class PersonModal extends Modal {
                 this.renderNoteInput(setting.controlEl);
             });
 
-
-        /* ───────── COMMENTAIRE ───────── */
-        const label_commentaire = "- COMMENTAIRE -";
-        new Setting(contentEl)
-            .setName(label_commentaire)
-            .setHeading();
-
+        new Setting(contentEl).setName("- COMMENTAIRE -").setHeading();
 
         const textarea = contentEl.createEl("textarea");
         textarea.addClass("person-comment");
@@ -131,7 +93,6 @@ export class PersonModal extends Modal {
         textarea.value = this.data.commentaire ?? "";
         textarea.oninput = () => (this.data.commentaire = textarea.value);
 
-        /* ───────── FOOTER ───────── */
         const footer = contentEl.createDiv("modal-footer");
 
         if (this.isEdit()) {
@@ -141,10 +102,11 @@ export class PersonModal extends Modal {
             });
 
             const deletePerson = async () => {
-                const removedPerson = this.plugin.data.personnes.find(p => p.id === this.data.id);
+                const maison = this.plugin.getActiveMaison();
+                const removedPerson = maison.personnes.find(p => p.id === this.data.id);
 
                 if (removedPerson?.pieceId) {
-                    this.plugin.data.historique.push({
+                    maison.historique.push({
                         id: Date.now().toString(),
                         personneId: removedPerson.id,
                         personneNom: getDisplayName(removedPerson),
@@ -155,68 +117,48 @@ export class PersonModal extends Modal {
                     });
                 }
 
-                this.plugin.data.personnes = this.plugin.data.personnes.filter(p => p.id !== this.data.id);
+                maison.personnes = maison.personnes.filter(p => p.id !== this.data.id);
 
                 await this.plugin.savePluginData();
-
                 if (this.onSave) this.onSave();
                 this.plugin.app.workspace.iterateAllLeaves(leaf => {
                     const view = leaf.view;
                     if ("refresh" in view) (view as { refresh: () => void }).refresh();
                 });
-
                 this.close();
-            }
+            };
 
             deleteBtn.onclick = () => {
                 new ConfirmDeleteModal(
                     this.app,
                     "Supprimer définitivement ce contact ?",
-                    () => { void deletePerson(); } // TS accepte void return
+                    () => { void deletePerson(); }
                 ).open();
             };
-
         }
 
-        const saveBtn = footer.createEl("button", {
-            text: "Enregistrer",
-            cls: "mod-cta"
-        });
-
+        const saveBtn = footer.createEl("button", { text: "Enregistrer", cls: "mod-cta" });
         saveBtn.onclick = async () => {
             await this.savePerson();
-            await this.plugin.savePluginData(); // pour les personnes
-            await this.plugin.saveSettings();   // pour les groupes, si tu les modifies ici
-            this.onSave();                      // callback
+            this.onSave();
             this.close();
         };
     }
 
-    /* ───────────────────────────── */
-    /* GROUPES (MULTI SELECT)        */
-    /* ───────────────────────────── */
     private renderNativeGroupSelector(container: HTMLElement) {
         container.empty();
-
         const groupes = this.plugin.settings.groupes;
         const selected = new Set(this.data.groupes ?? []);
 
-        /* ─── CHIPS SÉLECTIONNÉES ─── */
         if (selected.size > 0) {
             const selectedWrap = container.createDiv("group-selected-wrap");
-
-
             selected.forEach(id => {
                 const g = groupes.find(gr => gr.id === id);
                 if (!g) return;
-
                 const chip = selectedWrap.createDiv("setting-tag");
                 chip.setText(`${g.emoji} ${g.label}`);
-
                 const close = chip.createSpan("group-chip-close");
                 close.setText("✕");
-
-
                 close.onclick = () => {
                     selected.delete(id);
                     this.data.groupes = [...selected];
@@ -225,51 +167,28 @@ export class PersonModal extends Modal {
             });
         }
 
-        /* ─── DROPDOWN NATIF ─── */
         const select = container.createEl("select");
-        select.addClass("dropdown");
-        select.addClass("group-select");
-
-
-        const placeholder = select.createEl("option", {
-            text: "Ajouter un groupe…",
-            value: ""
-        });
+        select.addClass("dropdown", "group-select");
+        const placeholder = select.createEl("option", { text: "Ajouter un groupe…", value: "" });
         placeholder.selected = true;
 
         groupes
             .filter(g => !selected.has(g.id))
-            .forEach(g => {
-                select.createEl("option", {
-                    value: g.id,
-                    text: `${g.emoji} ${g.label}`
-                });
-            });
+            .forEach(g => select.createEl("option", { value: g.id, text: `${g.emoji} ${g.label}` }));
 
         select.onchange = () => {
             if (!select.value) return;
-
             selected.add(select.value);
             this.data.groupes = [...selected];
             this.render();
         };
     }
 
-
-
-
-    /* ───────────────────────────── */
-    /* NOTE AVEC SUGGESTIONS         */
-    /* ───────────────────────────── */
     private renderNoteInput(container: HTMLElement) {
         const files = this.app.vault.getMarkdownFiles();
-
         const wrapper = container.createDiv("note-input-wrapper");
 
-        const input = wrapper.createEl("input", {
-            type: "text",
-            placeholder: "Rechercher une note…"
-        });
+        const input = wrapper.createEl("input", { type: "text", placeholder: "Rechercher une note…" });
         input.addClass("note-input");
         input.value = this.data.notePath ?? "";
 
@@ -278,11 +197,7 @@ export class PersonModal extends Modal {
         input.oninput = () => {
             const value = input.value.toLowerCase();
             suggestions.empty();
-
-            if (!value) {
-                suggestions.removeClass("is-open");
-                return;
-            }
+            if (!value) { suggestions.removeClass("is-open"); return; }
 
             files
                 .filter(f => f.path.toLowerCase().includes(value))
@@ -294,7 +209,6 @@ export class PersonModal extends Modal {
                         input.value = f.path;
                         this.data.notePath = f.path;
                         suggestions.removeClass("is-open");
-
                     };
                 });
 
@@ -302,19 +216,18 @@ export class PersonModal extends Modal {
         };
     }
 
-    /* ───────────────────────────── */
     private async savePerson() {
-        const existing = this.plugin.data.personnes.find(p => p.id === this.data.id);
+        const maison = this.plugin.getActiveMaison();
+        const existing = maison.personnes.find(p => p.id === this.data.id);
 
         if (existing) Object.assign(existing, this.data);
-        else this.plugin.data.personnes.push(this.data as Personne);
+        else maison.personnes.push(this.data as Personne);
 
         await this.plugin.savePluginData();
         this.plugin.refreshHouseViews();
-        this.onSave();
     }
 
     private isEdit() {
-        return this.plugin.data.personnes.some(p => p.id === this.data.id);
+        return this.plugin.getActiveMaison().personnes.some(p => p.id === this.data.id);
     }
 }
