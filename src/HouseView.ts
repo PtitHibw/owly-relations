@@ -9,7 +9,17 @@ import { HistoryPanel } from "./ui/HistoryPanel";
 import { ContactsPanel } from "./ui/ContactsPanel";
 import { openPersonNote } from "./utils/openPersonNote";
 
-
+declare global {
+    interface Window {
+        electron: {
+            remote: {
+                shell: {
+                    openPath: (path: string) => Promise<string>;
+                };
+            };
+        };
+    }
+}
 export const VIEW_TYPE_HOUSE = "relationship-house-view";
 
 export class HouseView extends ItemView {
@@ -293,21 +303,23 @@ export class HouseView extends ItemView {
 		wrapper.createEl("p", { text: " " });
 		wrapper.createEl("code", { text: "Glissez le ensuite depuis votre dossier de téléchargement vers " });
 		
-
-		const openBtn = wrapper.createEl("a", { text: "ce dossier" });
+		const label = "ce dossier";
+        const openBtn = wrapper.createEl("a", { text: label });
 		openBtn.addClass("mod-cta");
 		openBtn.onclick = () => {
-			const pluginDir = (this.app.vault.adapter as any).getFullPath(
+			const adapter = this.app.vault.adapter as { getFullPath?: (path: string) => string };
+			const pluginDir = adapter.getFullPath?.(
 				this.app.vault.configDir + "/plugins/owly-relations"
-			);
-			const { shell } = require("electron");
-			shell.openPath(pluginDir);
+			) ?? "";
+			void window.electron.remote.shell.openPath(pluginDir);
 		};
-		
+
 		wrapper.createEl("p", { text: " " });
+
 		const reloadBtn = wrapper.createEl("button", { text: "Recharger Obsidian" });
 		reloadBtn.onclick = () => {
-			(this.app as any).commands.executeCommandById("app:reload");
+			const appWithCommands = this.app as unknown as { commands: { executeCommandById: (id: string) => void } };
+			appWithCommands.commands.executeCommandById("app:reload");
 		};
 	}
 
