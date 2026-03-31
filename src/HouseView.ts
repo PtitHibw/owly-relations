@@ -114,7 +114,8 @@ export class HouseView extends ItemView {
 		divider2.setText("|");
 
 		this.statusBar = statusZoomContainer.createDiv("house-coordinates");
-		this.statusBar.setText("X: -, Y: -");
+		const label = "X: -, Y: -";
+		this.statusBar.setText(label);
 
 		// Divider
 		const divider3 = statusZoomContainer.createDiv("house-zoom-divider");
@@ -142,7 +143,8 @@ export class HouseView extends ItemView {
 		};
 
 		this.svgWrapper.onmouseleave = () => {
-			this.statusBar.setText("X: -, Y: -");
+			const label = "X: -, Y: -";
+			this.statusBar.setText(label);
 		};
 
 		// ───────── SCROLL ZOOM ─────────

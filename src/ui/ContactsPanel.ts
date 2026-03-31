@@ -89,7 +89,8 @@ export class ContactsPanel {
         };
 
         const footer = content.createDiv("contacts-footer");
-        const addBtn = footer.createEl("button", { text: "+ Ajouter un contact" });
+        const label = "+ Ajouter un contact";
+        const addBtn = footer.createEl("button", { text: label });
         addBtn.onclick = () =>
             new PersonModal(
                 this.plugin.app,

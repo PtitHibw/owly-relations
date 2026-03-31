@@ -104,7 +104,8 @@ export class RelationshipHouseSettingsTab extends PluginSettingTab {
             };
         });
 
-        const addBtn = container.createEl("button", { text: "+ Ajouter un groupe" });
+        const label = "+ Ajouter un groupe";
+        const addBtn = container.createEl("button", { text: label });
         addBtn.addClass("group-add-btn");
         addBtn.onclick = async () => {
             this.plugin.settings.groupes.push({
@@ -190,7 +191,7 @@ export class RelationshipHouseSettingsTab extends PluginSettingTab {
 
             const deleteBtn = row.createEl("button", { text: "🗑" });
             if (this.plugin.data.maisons.length <= 1) {
-                deleteBtn.style.display = "none";
+                deleteBtn.addClass("is-hidden");
             }
             deleteBtn.onclick = () => {
                 new ConfirmDeleteModal(
@@ -200,8 +201,8 @@ export class RelationshipHouseSettingsTab extends PluginSettingTab {
                 ).open();
             };
         });
-
-        const addBtn = container.createEl("button", { text: "+ Ajouter une maison" });
+        const label = "+ Ajouter une maison";
+        const addBtn = container.createEl("button", { text: label });
         addBtn.addClass("group-add-btn");
         addBtn.onclick = async () => {
             await this.plugin.addMaison("Nouvelle maison");

@@ -40,11 +40,11 @@ export default class RelationshipHousePlugin extends Plugin {
     // ── Chargement + migration automatique ──────────────────────────────────
 
     async loadPluginData(): Promise<PluginData> {
-        const raw = await this.loadData() as StoredData | LegacyData | null;
+        const raw = await this.loadData() as StoredData & LegacyData | null;
 
         // Ancien format détecté → migration vers une maison "Maison principale"
         if (raw && "personnes" in raw && Array.isArray(raw.personnes)) {
-            const legacy = raw as LegacyData;
+            const legacy = raw;
             const maisonPrincipale: Maison = {
                 id: crypto.randomUUID(),
                 nom: "Maison principale",

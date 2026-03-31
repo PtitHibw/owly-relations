@@ -698,3 +698,6 @@
 }
 
 
+.is-hidden {
+    display: none;
+}

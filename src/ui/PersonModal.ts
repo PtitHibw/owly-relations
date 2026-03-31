@@ -37,7 +37,10 @@ export class PersonModal extends Modal {
 
         this.titleEl.setText(this.isEdit() ? "Modifier un contact" : "Ajouter un contact");
 
-        new Setting(contentEl).setName("- IDENTITÉ -").setHeading();
+        const label_identite = "- IDENTITÉ -";
+        new Setting(contentEl)
+            .setName(label_identite)
+            .setHeading();
 
         new Setting(contentEl)
             .setName("Surnom")
@@ -54,7 +57,10 @@ export class PersonModal extends Modal {
             .setDesc("Optionnel")
             .addText(t => t.setValue(this.data.nom ?? "").onChange(v => (this.data.nom = v)));
 
-        new Setting(contentEl).setName("- INFORMATIONS -").setHeading();
+        const label_informations = "- INFORMATIONS -";
+        new Setting(contentEl)
+            .setName(label_informations)
+            .setHeading();
 
         new Setting(contentEl)
             .setName("Date de naissance")
@@ -85,7 +91,12 @@ export class PersonModal extends Modal {
                 this.renderNoteInput(setting.controlEl);
             });
 
-        new Setting(contentEl).setName("- COMMENTAIRE -").setHeading();
+
+            
+        const label_commentaire = "- COMMENTAIRE -";
+        new Setting(contentEl)
+            .setName(label_commentaire)
+            .setHeading();
 
         const textarea = contentEl.createEl("textarea");
         textarea.addClass("person-comment");
